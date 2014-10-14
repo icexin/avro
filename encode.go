@@ -1,14 +1,24 @@
 package avro
 
 import (
+        "avro/zigzag"
         "bytes"
         "encoding/binary"
         "errors"
         "fmt"
         "io"
-        "newavro/zigzag"
         "reflect"
 )
+
+func Marshal(x interface{}) ([]byte, error) {
+        var buf bytes.Buffer
+        enc := NewEncoder(&buf)
+        err := enc.Encode(x)
+        if err != nil {
+                return nil, err
+        }
+        return buf.Bytes(), nil
+}
 
 type Encoder struct {
         w   io.Writer
@@ -38,7 +48,7 @@ func (e *Encoder) marshal(x interface{}) error {
                 return nil
         }
         switch v := x.(type) {
-        case Null:
+        case Null, *Null:
                 return nil
         case bool:
                 if v {
@@ -61,10 +71,7 @@ func (e *Encoder) marshal(x interface{}) error {
         case string:
                 e.marshal([]byte(v))
         default:
-                err := e.marshalComlpex(x)
-                if err != nil {
-                        return err
-                }
+                return e.marshalComlpex(x)
         }
         return nil
 }
@@ -133,7 +140,7 @@ func (e *Encoder) marshalComlpex(x interface{}) error {
                         }
                 }
         default:
-                return fmt.Errorf("not supported:%s", p.Type().Kind())
+                panic(fmt.Errorf("not supported:%s", p.Type()))
         }
         return nil
 }

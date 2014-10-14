@@ -1,13 +1,20 @@
 package avro
 
 import (
+        "avro/zigzag"
         "bufio"
+        "bytes"
         "encoding/binary"
         "fmt"
         "io"
-        "newavro/zigzag"
         "reflect"
 )
+
+func Unmarshal(b []byte, x interface{}) error {
+        buf := bytes.NewBuffer(b)
+        dec := NewDecoder(buf)
+        return dec.Decode(x)
+}
 
 type Decoder struct {
         r *bufio.Reader
@@ -98,7 +105,7 @@ func (d *Decoder) decodeComplex(x interface{}) error {
         case reflect.Struct:
                 return d.decodeStruct(x)
         default:
-                return fmt.Errorf("not supported:%s", p.Kind())
+                panic(fmt.Errorf("not supported:%s", p.Type()))
         }
         return nil
 }
@@ -131,7 +138,7 @@ func (d *Decoder) decodeMap(x interface{}) error {
         }
 
         if v.IsNil() {
-                return fmt.Errorf("decode nil map")
+                v.Set(reflect.MakeMap(t))
         }
 
         var blkcnt int
@@ -177,9 +184,9 @@ func (d *Decoder) decodeStruct(x interface{}) error {
         for i := 0; i < n; i++ {
                 f := v.Field(i)
                 if f.CanSet() {
-                        err := d.Decode(v.Field(i).Addr().Interface())
+                        err := d.Decode(f.Addr().Interface())
                         if err != nil {
-                                return err
+                                return fmt.Errorf("decode %s:%s", t.Field(i).Name, err)
                         }
                 }
         }
@@ -193,7 +200,7 @@ func (d *Decoder) decodeSlice(x interface{}) error {
                 return fmt.Errorf("element of slice must be concrete type, not interface")
         }
         if v.IsNil() {
-                return fmt.Errorf("decode nil slice")
+                v.Set(reflect.MakeSlice(t, 0, 4))
         }
 
         var n int
