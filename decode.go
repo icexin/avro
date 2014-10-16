@@ -77,6 +77,7 @@ func (d *Decoder) Decode(x interface{}) error {
         default:
                 err = d.decodeComplex(x)
         }
+
         return err
 }
 
@@ -116,7 +117,7 @@ func (d *Decoder) decodeUnion(x interface{}) error {
         if err != nil {
                 return err
         }
-        if len(v.Elem) <= v.Idx {
+        if v.Idx >= len(v.Elem) || v.Idx < 0 {
                 return fmt.Errorf("union index error:%d", v.Idx)
         }
         return d.Decode(v.Elem[v.Idx])

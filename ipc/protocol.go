@@ -103,6 +103,6 @@ type Request struct {
 }
 
 type Response struct {
-        Meta   map[string]string
-        Unions avro.Union
+        Meta  map[string]string
+        Error bool
 }

@@ -95,15 +95,26 @@ func (c *clientCodec) ReadResponseHeader(r *rpc.Response) error {
 }
 
 func (c *clientCodec) ReadResponseBody(x interface{}) error {
-        u, ok := x.(avro.Union)
+        u, ok := x.(*avro.Union)
         if !ok {
-                panic("response must be avro.Union")
+                panic("response must be *avro.Union")
         }
         rep := Response{
-                Meta:   make(map[string]string),
-                Unions: u,
+                Meta:  make(map[string]string),
+                Error: false,
         }
-        return c.dec.Decode(&rep)
+        err := c.dec.Decode(&rep)
+        if err != nil {
+                return err
+        }
+        if !rep.Error {
+                u.Idx = 0
+                err = c.dec.Decode(u.Elem[0])
+        } else {
+                u.Idx = 1
+                err = c.dec.Decode(u.Elem[1])
+        }
+        return err
 }
 
 func (c *clientCodec) Close() error {
